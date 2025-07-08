@@ -1,15 +1,18 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from enum import Enum
+from uuid import uuid4
 
+game = {} # key: game_id, value: game ate
 player_choices = {}
 app = FastAPI()
 
 class ChoiceEnum(str, Enum):
     cooperate = "C"
-    defec = "D"
-
+    defect = "D"
+    
 class PlayerChoice(BaseModel):
+    game_id: str
     player_id: str
     choice: ChoiceEnum
 
@@ -17,9 +20,10 @@ class PlayerChoice(BaseModel):
 def read_root():
     return {"message": "Welcome to prison's Dilemma game!"}
 
+
 @app.post("/submit")
 def submit_choice(choice: PlayerChoice):
-    player_choices[choice.player_id] = choice.choice
+    player_choices[choice.player_id] = choice.choice.value
     
     if len(player_choices) == 2:
         p1_id, p2_id = list(player_choices.keys())
@@ -41,5 +45,14 @@ def submit_choice(choice: PlayerChoice):
             "player_2": {"id":p2_id, "choice": p2_choice, "score": results[1]},
         }
     else:
-        return {"messege": "Waiting for the other player..."}
-        
+        return {"message": "Waiting for the other player..."}
+
+@app.post("/start")
+def start_game():
+    game_id = str(uuid4())
+    games[game_id] = {
+        "round": 1, 
+        "players": {},
+        "history": [] # here will store past results
+    }
+    return {"game_id": game_id, "message": "New game started"}
